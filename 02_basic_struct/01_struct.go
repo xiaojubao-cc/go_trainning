@@ -62,6 +62,7 @@ func NewPerson(opt ...PersonOptions) *Person {
 }
 func main() {
 	var person = NewPerson(
+		/*这里相当于是已经调用了函数返回了PersonOptions类型函数*/
 		WithName("Jerry"),
 		WithAge(18),
 		WithAddress("China"),
