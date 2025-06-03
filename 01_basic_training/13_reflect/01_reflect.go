@@ -43,4 +43,8 @@ func main() {
 	/*判断一个类型是否可以被转换为另外一个类型*/
 	convert := reflect.TypeOf(interfaceImpl).ConvertibleTo(reflect.TypeOf(inter).Elem())
 	fmt.Printf("判断方法是否可以强转：%t\n", convert)
+	fmt.Printf("%v\n", reflect.TypeOf(interfaceImpl).Elem())
+	/*kind获取基本数据类型*/
+	fmt.Printf("%v\n", reflect.TypeOf(interfaceImpl).Elem().Kind())
+	fmt.Printf("%v\n", reflect.TypeOf(inter).Elem())
 }

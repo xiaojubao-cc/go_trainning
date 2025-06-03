@@ -13,6 +13,9 @@ type GenericsSlice[T int | string] []T
 // GenericsMap /*泛型字典*/
 type GenericsMap[K string, V interface{}] map[K]V
 
+// GenericsPipe 定义管道类型
+type GenericsPipe[T int | string] chan T
+
 // GenericsStruct /*泛型结构体*/
 type GenericsStruct[T int | string, S int | string] struct {
 	name string
