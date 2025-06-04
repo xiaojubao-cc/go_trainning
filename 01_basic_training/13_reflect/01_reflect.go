@@ -29,9 +29,11 @@ func main() {
 	fmt.Printf("获取变量的基本类型：%s\n", typeOf.Kind())
 	/*elem指针，切片，数组，通道，映射表*/
 	slice := make([]int, 0)
+	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(slice))
 	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(slice).Elem())
 
 	var ptr = new([]int)
+	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(ptr))
 	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(ptr).Elem())
 	fmt.Printf("获取引用类型的基本数据类型名称：%s\n", reflect.TypeOf(ptr).Elem().Kind())
 	fmt.Printf("获取引用类型的字节长度：%d\n", reflect.TypeOf(ptr).Size())

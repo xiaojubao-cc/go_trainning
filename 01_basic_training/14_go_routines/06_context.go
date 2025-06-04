@@ -19,16 +19,17 @@ LOOP:
 		select {
 		case <-cx.Done():
 			//阻塞等待取消函数的调用通知
-			fmt.Println("任务取消")
+			fmt.Println("work is canceled")
 			break LOOP
 		default:
-			fmt.Println("任务执行中")
+			fmt.Println("work is running")
 		}
 	}
 	wg.Done()
 }
 
 func work1(cx context.Context) {
+	work2(cx)
 LOOP:
 	for {
 		fmt.Println("worker1")
@@ -36,20 +37,31 @@ LOOP:
 		select {
 		case <-cx.Done():
 			//阻塞等待取消函数的调用通知
-			fmt.Println("任务1取消")
+			fmt.Println("work1 is canceled")
 			break LOOP
 		default:
-			fmt.Println("任务1执行中")
+			fmt.Println("work1 is running")
 		}
 	}
 }
-
+func work2(ctx context.Context) {
+LOOP:
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("work2 is canceled")
+			break LOOP
+		default:
+			fmt.Println("work2 is running")
+		}
+	}
+}
 func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	wg.Add(1)
 	go work(ctx)
-	fmt.Println("任务开始取消调用...")
-	defer cancelFunc()
+	fmt.Println("task is canceling...")
+	cancelFunc()
 	wg.Wait()
-	fmt.Println("over")
+	fmt.Println("task is over")
 }

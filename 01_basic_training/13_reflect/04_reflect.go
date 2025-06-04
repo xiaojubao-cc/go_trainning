@@ -44,6 +44,7 @@ func main() {
 	fmt.Printf("%+v\n", p)
 	/*修改私有属性的值*/
 	money := reflect.ValueOf(p).Elem().FieldByName("money")
+	/*判断结构体中是否有money字段*/
 	if (money != reflect.Value{}) {
 		/*构造私有字段的指针映射*/
 		newPointer := reflect.NewAt(money.Type(), money.Addr().UnsafePointer())

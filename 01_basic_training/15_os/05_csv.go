@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -123,6 +125,22 @@ type StateTable struct {
 	circuitCourt          string
 }
 
+type StateTableSlice []*StateTable
+
+func (s StateTableSlice) Len() int {
+	return len(s)
+}
+
+//struct实现sort三个函数接口
+
+func (s StateTableSlice) Less(i, j int) bool {
+	idi, _ := strconv.Atoi(strings.ReplaceAll(s[i].id, "\"", ""))
+	idj, _ := strconv.Atoi(strings.ReplaceAll(s[j].id, "\"", ""))
+	return idi < idj
+}
+func (s StateTableSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
 func readFile(filePath string) map[string]int {
 	content := make(map[string]int)
 	row := 0
@@ -165,6 +183,8 @@ func main() {
 			tables = append(tables, stateTable)
 		}
 	}
+	/*这里是强转*/
+	sort.Sort(StateTableSlice(tables))
 	for _, table := range tables {
 		fmt.Printf("%+v\n", table)
 	}

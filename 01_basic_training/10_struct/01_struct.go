@@ -3,6 +3,7 @@ package main
 import "fmt"
 
 // Person /*结构体*/
+/*结构嵌套优先使用匿名字段类似于继承,嵌套实体类的字段会在json序列化时自动展开*/
 type Person struct {
 	Name     string
 	Age      int

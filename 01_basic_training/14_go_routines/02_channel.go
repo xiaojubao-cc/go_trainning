@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+/*
+不能重复关闭通道，由发送方关闭通道;无缓冲通道需要发送和接收在不同的协程中准备就绪;避免协程间的相互等待
+通道关闭后不能再接收数据，否则会panic;使用select注意添加default分支
+*/
 func incrementor() chan int {
 	ch := make(chan int)
 	go func() {
@@ -57,14 +61,19 @@ func merge(chList ...chan int) chan int {
 	for _, ch := range chList {
 		go func(ch chan int) {
 			defer wg.Done()
-			defer close(out)
 			for num := range ch {
 				out <- num
 			}
 		}(ch)
 	}
+	/*
+		非阻塞返回：merge 函数立即返回 out 通道，调用者可以立刻开始消费数据。
+		通道关闭时机正确：在所有数据发送完毕后关闭通道，避免数据丢失。
+		避免死锁：若 wg.Wait() 在主协程，merge 函数会阻塞，导致调用者无法接收数据，形成死锁。
+	*/
 	go func() {
 		wg.Wait()
+		close(out)
 	}()
 	return out
 }
