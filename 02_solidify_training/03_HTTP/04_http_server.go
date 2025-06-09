@@ -5,6 +5,19 @@ import (
 	"net/http"
 )
 
+/*
+resp http.ResponseWriter, req *http.Request针对指针类型做出解释:
+*http.Request使用指针的深层原因
+
+	避免内存复制 http.Request是包含Header、Body、URL等复杂字段的结构体，传递指针（约8 bytes）比复制整个结构体（200+ bytes）更高效
+	保持请求上下文完整性 请求对象在生命周期中会被中间件、处理器等多层处理，使用指针保证所有操作都作用于同一个请求实例
+	支持特殊场景修改 虽然常规处理不推荐修改请求，但某些框架会通过req = req.WithContext()等方式派生新请求对象
+
+http.ResponseWriter使用值类型的本质
+
+		Go的接口变量实际是(type, value)的双字结构，底层已包含指针语义，传递时自动处理为引用效果
+	    接口方法天然支持修改响应状态，无需指针传递
+*/
 type handler int
 
 func (h handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
