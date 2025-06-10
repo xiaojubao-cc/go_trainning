@@ -25,17 +25,18 @@ func (i *InterfaceImpl) Print() {
 func main() {
 	str := "hello world"
 	typeOf := reflect.TypeOf(str)
-	fmt.Printf("str的类型是：%s\n", typeOf)
-	fmt.Printf("获取变量的基本类型：%s\n", typeOf.Kind())
+	fmt.Printf("str的类型是：%s\n", typeOf)          //string
+	fmt.Printf("获取变量的基本类型：%s\n", typeOf.Kind()) //string
 	/*elem指针，切片，数组，通道，映射表*/
 	slice := make([]int, 0)
-	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(slice))
-	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(slice).Elem())
+	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(slice))               //[]int
+	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(slice).Elem())        //int
+	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(slice).Elem().Kind()) //int
 
 	var ptr = new([]int)
-	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(ptr))
-	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(ptr).Elem())
-	fmt.Printf("获取引用类型的基本数据类型名称：%s\n", reflect.TypeOf(ptr).Elem().Kind())
+	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(ptr))                 //*[]int
+	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(ptr).Elem())          //[]int
+	fmt.Printf("获取引用类型的基本数据类型名称：%s\n", reflect.TypeOf(ptr).Elem().Kind()) //slice
 	fmt.Printf("获取引用类型的字节长度：%d\n", reflect.TypeOf(ptr).Size())
 	/*判断方法是否实现了某一个接口*/
 	inter := new(Interface)
@@ -45,8 +46,8 @@ func main() {
 	/*判断一个类型是否可以被转换为另外一个类型*/
 	convert := reflect.TypeOf(interfaceImpl).ConvertibleTo(reflect.TypeOf(inter).Elem())
 	fmt.Printf("判断方法是否可以强转：%t\n", convert)
-	fmt.Printf("%v\n", reflect.TypeOf(interfaceImpl).Elem())
+	fmt.Printf("%v\n", reflect.TypeOf(interfaceImpl).Elem()) //main.InterfaceImpl
 	/*kind获取基本数据类型*/
-	fmt.Printf("%v\n", reflect.TypeOf(interfaceImpl).Elem().Kind())
-	fmt.Printf("%v\n", reflect.TypeOf(inter).Elem())
+	fmt.Printf("%v\n", reflect.TypeOf(interfaceImpl).Elem().Kind()) //struct
+	fmt.Printf("%v\n", reflect.TypeOf(inter).Elem())                //main.Interface
 }
