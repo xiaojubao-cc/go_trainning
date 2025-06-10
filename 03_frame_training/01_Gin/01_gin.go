@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -12,14 +13,16 @@ type Person struct {
 
 func boundStruct(c *gin.Context) {
 	var person Person
-	err := c.ShouldBind(&person)
+	/*绑定参数调用curl -X GET "localhost:8080/boundStruct?name=appleboy&age=17"*/
+	err := c.ShouldBindQuery(&person)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	c.String(http.StatusOK, `boundStruct`)
+	str := fmt.Sprintf("name: %s, age: %d", person.Name, person.Age)
+	c.String(http.StatusOK, str)
 }
 func main() {
 	engine := gin.Default()

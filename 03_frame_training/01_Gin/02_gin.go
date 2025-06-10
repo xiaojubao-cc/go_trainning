@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// 绑定前端复选框
 type colorForm struct {
 	Colors []string `form:"colors[]"`
 }
@@ -25,7 +26,7 @@ func boundSlice(c *gin.Context) {
 func main() {
 	engine := gin.Default()
 	/*设置工作目录为项目根目录*/
-	os.Chdir("D:/go_projects/go_trainning/03_frame_training/01_Gin")
+	os.Chdir("D:\\golang projects\\go_training\\03_frame_training\\01_Gin")
 	engine.LoadHTMLGlob("views/*")
 	engine.GET("/", index)
 	engine.POST("/", boundSlice)
