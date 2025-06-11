@@ -35,6 +35,7 @@ var _ binding.StructValidator = &defaultValidator{}
 func (v *defaultValidator) lazyInit() {
 	v.once.Do(func() {
 		v.validate = validator.New()
+		/*validate:"required" binding:"required" 现在只需写 binding:"required"*/
 		v.validate.SetTagName("binding")
 	})
 }

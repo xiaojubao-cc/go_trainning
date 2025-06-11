@@ -35,6 +35,16 @@ func customLengthValidator() validator.Func {
 		return true
 	}
 }
+
+// 自定义结构体验证
+func customStructValidator(sl validator.StructLevel) {
+	if booking, ok := sl.Current().Interface().(Booking); ok {
+		if booking.CheckIn.After(booking.CheckOut) {
+			sl.ReportError(booking.CheckIn, "check_in", "CheckIn", "checkInAfterCheckOut", "")
+		}
+	}
+}
+
 func getBooking(c *gin.Context) {
 	var booking Booking
 	/*binding.JSON 对应tag标签json,binding.XML对应的tag标签是xml
@@ -42,8 +52,18 @@ func getBooking(c *gin.Context) {
 	参数                  说明
 	-X GET        		指定 HTTP 方法为 GET（可省略，默认 GET）
 	-H            		设置请求头（如 -H "Content-Type: application/json"）
-	-d            		发送 POST 请求体数据（适用于 POST/PUT 方法）
+	-d            		发送 POST 请求体数据（适用于 POST/PUT 方法）(默认 application/x-www-form-urlencoded)
 	-G            		强制将 -d 参数转换为 URL 查询参数（GET 方法专用）
+	-v                  输出详细信息
+	-o                  将响应输出到文件
+	-O                  下载文件并保留原文件
+	-k                  忽略SSL证书验证
+	-u                  添加认证信息(格式：username:password)
+	-b                  发送cookie
+	-A                  设置User-Agent
+	--compressed        压缩响应
+	-T                  上传文件
+	--form              上传表单/文件
 	--data-urlencode    自动 URL 编码参数值（处理特殊字符时使用）
 	  binding.Query调用示例:
 	  curl -G "http://localhost:8080/booking" \
@@ -68,6 +88,7 @@ func main() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("customValidator", customValidator())
 		v.RegisterValidation("customLengthValidator", customLengthValidator())
+		v.RegisterStructValidation(customStructValidator, Booking{})
 	}
 	router.POST("/booking", getBooking)
 	router.Run(":8080")

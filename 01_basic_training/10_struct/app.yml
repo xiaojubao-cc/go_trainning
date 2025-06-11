@@ -1,0 +1,8 @@
+server:
+  port: 8080
+  env: production
+  timeout: 30s
+features:
+  - auth
+  - logging
+  - metrics

@@ -144,7 +144,7 @@ func UserStructLevelValidation(sl validator.StructLevel) {
 	user := sl.Current().Interface().(Users)
 	if len(user.FirstName) == 0 || len(user.LastName) == 0 {
 		//自定义错误输出格式"Key: 'Users.fname' Error:Field validation for 'fname' failed on the 'fnameoflname' tag"
-		sl.ReportError(user.FirstName, "fname", "FirstName", "fnameoflname", "")
-		sl.ReportError(user.LastName, "lname", "LastName", "fnameoflname", "")
+		sl.ReportError(user.FirstName, "fname", "FirstName", "fnameoflname", "10")
+		sl.ReportError(user.LastName, "lname", "LastName", "fnameoflname", "10")
 	}
 }
