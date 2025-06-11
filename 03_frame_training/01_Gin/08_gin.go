@@ -63,6 +63,7 @@ func getBooking(c *gin.Context) {
 	-A                  设置User-Agent
 	--compressed        压缩响应
 	-T                  上传文件
+	-F                  模拟 HTML 表单提交（multipart/form-data），通常用于上传文件或发送包含文件和其他字段的 POST 请求。
 	--form              上传表单/文件
 	--data-urlencode    自动 URL 编码参数值（处理特殊字符时使用）
 	  binding.Query调用示例:
