@@ -8,11 +8,11 @@ import (
 
 // Config /*解析文件*/
 type Config struct {
-	Database string
-	Url      string
-	Port     int
-	Username string
-	Password string
+	Database string `yaml:"database"`
+	Url      string `yaml:"url"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 func main() {

@@ -27,7 +27,7 @@ func main() {
 	typeOf := reflect.TypeOf(str)
 	fmt.Printf("str的类型是：%s\n", typeOf)          //string
 	fmt.Printf("获取变量的基本类型：%s\n", typeOf.Kind()) //string
-	/*elem指针，切片，数组，通道，映射表*/
+	/*elem指针，接口，切片，数组，通道，映射表*/
 	slice := make([]int, 0)
 	fmt.Printf("获取引用类型的基本数据类型：%v\n", reflect.TypeOf(slice))               //[]int
 	fmt.Printf("获取引用类型的基本数据类型：%s\n", reflect.TypeOf(slice).Elem())        //int

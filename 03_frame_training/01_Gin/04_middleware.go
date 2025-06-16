@@ -9,7 +9,9 @@ import (
 
 //自定义中间件
 
-func customMiddleware() gin.HandlerFunc {
+type CustomMiddleware = gin.HandlerFunc
+
+func customMiddleware() CustomMiddleware {
 	return func(context *gin.Context) {
 		t := time.Now()
 		// 设置 example 变量
@@ -24,10 +26,15 @@ func customMiddleware() gin.HandlerFunc {
 		log.Println(status)
 	}
 }
+func middlewareChain(router *gin.Engine, middlewares ...CustomMiddleware) {
+	for _, middleware := range middlewares {
+		router.Use(middleware)
+	}
+}
 func main() {
 	router := gin.New()
-	router.Use(customMiddleware())
-	router.Use(gin.Recovery())
+	//执行函数的调用
+	middlewareChain(router, customMiddleware(), gin.Recovery())
 	router.GET("/", func(context *gin.Context) {
 		/*强制获取指定键值*/
 		example := context.MustGet("example").(string)

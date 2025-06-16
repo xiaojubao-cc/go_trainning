@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 )
 
@@ -9,9 +10,9 @@ import (
 func main() {
 	router := gin.Default()
 	/*这里相当于赋值给DebugPrintRouteFunc覆盖原本的DebugPrintRouteFunc函数,类似重写*/
-	//gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
-	//	log.Printf("endpoint %v %v %v %v\n", httpMethod, absolutePath, handlerName, nuHandlers)
-	//}
+	gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
+		log.Printf("endpoint %v %v %v %v\n", httpMethod, absolutePath, handlerName, nuHandlers)
+	}
 	router.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, "status")
 	})
