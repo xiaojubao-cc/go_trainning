@@ -1,12 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
+	"gorm.io/hints"
 	"log"
 	"os"
 	"strings"
@@ -27,9 +30,9 @@ import (
 
 */
 /*
-	方法                 作用             是否需要结构体           是否支持关联操作             是否自动映射字段
-Model(&Struct{})  绑定结构体与数据库表关系  ✅ 必须传入结构体指针      ✅ 支持关联操作             ✅ 自动映射字段
-Table("table_name")   直接指定表名          ❌ 无需结构体          ❌ 不支持关联操作           ❌ 不自动映射字段
+	方法                 作用             是否需要结构体           是否支持关联操作           是否自动映射字段       是否触发钩子函数
+Model(&Struct{})  绑定结构体与数据库表关系  ✅ 必须传入结构体指针      ✅ 支持关联操作            ✅ 自动映射字段           会
+Table("table_name")   直接指定表名          ❌ 无需结构体          ❌ 不支持关联操作          ❌ 不自动映射字段         不会
 
 使用场景                 推荐方法               说明
 查询完整模型数据            Find           支持关联、分页、零值过滤
@@ -55,7 +58,7 @@ type Employee struct {
 	BirthDate    CustomTime `json:"birth_date"` // 出生日期
 	Position     string     `json:"position"`   // 职位
 	Salary       string     `json:"salary"`
-	DepartmentId int64      `json:"department_id"` // 所属部门
+	DepartmentId int8       `json:"department_id"` // 所属部门
 	HireDate     CustomTime `json:"hire_date"`
 	Email        string     `json:"email"`
 	CreatedAt    CustomTime `json:"created_at"`
@@ -142,6 +145,8 @@ func selectBasicConnection() *gorm.DB {
 		//全局配置设置批量插入单个批次数量 /*这里是针对本次session设置批次*/db.Session(&gorm.Session{CreateBatchSize: 1000,})
 		CreateBatchSize: 1000,
 		Logger:          newLogger,
+		/*所有模型字段都按其名称进行选择select * from table*/
+		//QueryFields: true,
 		//设置表名
 		//NamingStrategy: schema.NamingStrategy{
 		//	TablePrefix:   "",   //表名前缀
@@ -158,8 +163,9 @@ func selectBasicConnection() *gorm.DB {
 	return db
 }
 
+// AfterFind /*钩子函数处理查询后的数据*/
 func (employee *Employee) AfterFind(tx *gorm.DB) (err error) {
-
+	//针对数据库查询的数据进行处理返回
 	return nil
 }
 
@@ -173,11 +179,46 @@ func main() {
 	//SelectSingleOrMultiplyEmployeeByNotNumberPrimaryKey()
 	//如果结构体有默认值
 	//SelectSingleOrMultiplyEmployeeByStructDefaultValue()
+	/*字符串作为查询条件*/
 	//SelectSingleOrMultiplyEmployeeByWhereStringCondition()
+	/*struct,map,slice作为条件查询*/
 	//SelectSingleOrMultiplyEmployeeByWhereMapOrStructOrSliceCondition()
+	/*limit和offset*/
 	//SelectSingleOrMultiplyEmployeeByPage()
+	/*group操作*/
 	//SelectFieldGroupByTable()
+	/*原生sql查询*/
 	//SelectByRawAndScan()
+	/*映射字段*/
+	//SelectAllFields()
+	/*锁定改行所有操作*/
+	//GormForUpdateLock()
+	/*锁定某行其他事务可以查询该行*/
+	//GormForShareLock()
+	/*获取不到锁则不等待*/
+	//GormForWaitOption()
+	/*跳过事务正在处理的行*/
+	//GormForSkipLock()
+	/*多列条件查询*/
+	//GormMultipleColumns()
+	/*命名参数*/
+	//GormChristenParam()
+	/*如果未找到匹配的记录，则初始化新实例*/
+	//GormFirstOrInit()
+	/*如果未找到匹配的记录，则创建*/
+	//GormFirstOrCreate()
+	/*指定索引*/
+	//GormHintIndex()
+	/*适合查询*/
+	//GormIterate()
+	/*适合查询出的数据进行处理*/
+	//GormFindInBatches()
+	/*查询某列数据返回切片*/
+	//GormPluck()
+	/*范围应用*/
+	//GormScopes()
+	/*计数*/
+	GormCount()
 }
 
 func CreateMultipleEmployee() {
@@ -336,7 +377,7 @@ func SelectFieldGroupByModel() {
 }
 
 func SelectFieldGroupByTable() {
-	/*Table不能使用连表Joins*/
+	/*Table不能使用连表Joins但是可以使用子查询*/
 	dataMap := make([]map[string]interface{}, 0)
 	//selectDb.Table("employee").Select("department_id,SUM(salary)").Group("department_id").Scan(&dataMap)
 	//for k, v := range dataMap {
@@ -372,4 +413,178 @@ func SelectByRawAndScan() {
 		marshal, _ := json.Marshal(&employee)
 		fmt.Printf("SelectByRawAndScan is %+v\n", string(marshal))
 	}
+}
+
+func SelectAllFields() {
+	var maps = make(map[string]interface{})
+	/*配置中添加QueryFields:true以所有模型字段都按其名称进行选择*/
+	selectDb.Session(&gorm.Session{QueryFields: true}).Model(Employee{}).Where("id = ?", 1).Select("name", "gender").Scan(&maps)
+	fmt.Printf("SelectAllFields is %+v\n", maps)
+	for _, employee := range maps {
+		marshal, _ := json.Marshal(&employee)
+		fmt.Printf("SelectAllFields is %+v\n", string(marshal))
+	}
+}
+
+func GormForUpdateLock() {
+	/*
+		1.update:锁定操作行 SELECT * FROM `employee` WHERE `employee`.`id` = 1 FOR UPDATE
+	*/
+	var employee Employee = Employee{Id: 1}
+	selectDb.Clauses(clause.Locking{Strength: "UPDATE"}).Find(&employee)
+	marshal, _ := json.Marshal(&employee)
+	fmt.Printf("GormForUpdateLock is %+v\n", marshal)
+}
+
+func GormForShareLock() {
+	/*允许其他事务针对操作行进行查询 SELECT * FROM `employee` WHERE `employee`.`id` = 1 FOR SHARE OF `employee`*/
+	var employee Employee = Employee{Id: 1}
+	/*Table: clause.Table{Name: clause.CurrentTable}:当使用 JOIN 查询多个表时，若仅需锁定主表的数据行，避免对关联表加锁*/
+	selectDb.Clauses(clause.Locking{Strength: "SHARE", Table: clause.Table{Name: clause.CurrentTable}}).Find(&employee)
+}
+
+func GormForWaitOption() {
+	/*
+			Options:NOWAIT:立即返回
+		    SELECT * FROM `employee` WHERE `employee`.`id` = 1 FOR UPDATE NOWAIT
+	*/
+	var employee Employee = Employee{Id: 1}
+	selectDb.Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).Find(&employee)
+}
+
+func GormForSkipLock() {
+	/*
+			SKIP LOCKED:跳过已被其他事务锁定的任何行,高并发有用
+		    SELECT * FROM `employee` FOR UPDATE SKIP LOCKED
+	*/
+	var employee []Employee
+	selectDb.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).Find(&employee)
+}
+
+func GormSubQuery() {
+	/*子查询有性能问题*/
+
+}
+
+func GormMultipleColumns() {
+	var employees []Employee
+	selectDb.Where("(name,department_id,gender) IN ?", [][]interface{}{{"Tom", 1, 1}, {"Jerry", 2, 2}}).Find(&employees)
+	for _, employee := range employees {
+		marshal, _ := json.Marshal(&employee)
+		fmt.Printf("GormMultipleColumns is %+v\n", string(marshal))
+	}
+}
+
+func GormChristenParam() {
+	var employees []Employee
+	selectDb.Where("name = @name", sql.Named("name", "Tom")).Or("department_id in @Ids", sql.Named("Ids", []int{1, 2, 3})).Find(&employees)
+	for _, employee := range employees {
+		marshal, _ := json.Marshal(&employee)
+		fmt.Printf("GormChristenParam is %+v\n", string(marshal))
+	}
+}
+
+func GormFirstOrInit() {
+	/*如果未找到匹配的记录，则初始化新实例*/
+	var employee Employee
+	//selectDb.FirstOrInit(&employee, Employee{Name: "Oliver"})
+	//selectDb.FirstOrInit(&employee, map[string]interface{}{"name": "Oliver",})
+	/*Attrs未找到记录才进行初始化数据 GormFirstOrInit is {"id":0,"name":"Oliver","gender":0,"birth_date":"0001-01-01 00:00:00","position":"","salary":"80000","department_id":0,"hire_date":"0001-01-01 00:00:00","email":"","created_at":"0001-01-01 00:00:00","updated_at":"0001-01-01 00:00:00"}*/
+	//selectDb.Where(Employee{Name: "Oliver"}).Attrs(Employee{Salary: "80000"}).FirstOrInit(&employee)
+	/*Assign无论是否找到数据都进行初始化,但是不会保存到数据库 GormFirstOrInit is {"id":1,"name":"Harden","gender":1,"birth_date":"2023-09-22 01:00:00","position":"Developer","salary":"5000","department_id":1,"hire_date":"2025-06-16 15:11:10","email":"tom@gmail.com","created_at":"2025-06-16 15:11:10","updated_at":"2025-06-16 15:11:10"}*/
+	selectDb.Where(Employee{Name: "Tom"}).Assign(Employee{Name: "Harden"}).FirstOrInit(&employee)
+	marshal, _ := json.Marshal(&employee)
+	fmt.Printf("GormFirstOrInit is %+v\n", string(marshal))
+}
+
+func GormFirstOrCreate() {
+	/*如果没有找到匹配的记录，则创建一个新记录*/
+	var employee Employee
+	//selectDb.FirstOrCreate(&employee, Employee{Name: "Oliver"})
+	//selectDb.FirstOrCreate(&employee, map[string]interface{}{"name": "Oliver",})
+	/*Attrs为新记录指定其他属性会保存到数据库*/
+	selectDb.Where(Employee{Name: "Oliver"}).Attrs(Employee{Salary: "80000"}).FirstOrCreate(&employee)
+	/*Assign为新纪录指定其他属性会保存到数据库*/
+	selectDb.Where(Employee{Name: "Oliver"}).Attrs(Employee{Email: "oliver@gmail.com"}).FirstOrCreate(&employee)
+}
+
+func GormHintIndex() {
+	var employees []Employee
+	/*指定索引*/
+	//selectDb.Clauses(hints.UseIndex("index_name")).Find(&employee)
+	/*Join操作指定索引*/
+	selectDb.Clauses(hints.ForceIndex("index_department_id")).Joins("left join department on department.id = employee.department_id").Find(&employees)
+	for _, employee := range employees {
+		marshal, _ := json.Marshal(&employee)
+		fmt.Printf("GormHintIndex is %+v\n", string(marshal))
+	}
+}
+
+func GormIterate() {
+	/*使用流式查询需要关闭流*/
+	var employees []Employee
+	rows, _ := selectDb.Model(Employee{}).Rows()
+	defer rows.Close()
+	for rows.Next() {
+		var employee Employee
+		selectDb.ScanRows(rows, &employee)
+		employees = append(employees, employee)
+	}
+	for _, employee := range employees {
+		marshal, _ := json.Marshal(&employee)
+		fmt.Printf("GormIterate is %+v\n", string(marshal))
+	}
+}
+
+func GormFindInBatches() {
+	var employees []Employee
+	selectDb.FindInBatches(&employees, 2, func(tx *gorm.DB, batch int) error {
+		for _, employee := range employees {
+			marshal, _ := json.Marshal(&employee)
+			fmt.Printf("GormFindInBatches is %+v\n", string(marshal))
+		}
+		return nil
+	})
+}
+
+func GormPluck() {
+	/*将查询的某一列数据组装为slice返回*/
+	var names []string
+	//selectDb.Model(Employee{}).Pluck("name", &names)
+	selectDb.Table("employee").Distinct().Pluck("name", &names)
+	for _, name := range names {
+		fmt.Printf("GormPluck is %+v\n", name)
+	}
+}
+
+// GormScopesWithName /*需要传参的scopes需要返回函数*/
+func GormScopesWithName(names []string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("name in ?", names)
+	}
+}
+
+// GormScopesWithSalary /*不需要传参的直接返回对象*/
+func GormScopesWithSalary(db *gorm.DB) *gorm.DB {
+	return db.Where("salary > ?", "3000")
+}
+func GormScopes() {
+	/*将公共部分进行抽取*/
+	var employees []Employee
+	selectDb.Scopes(GormScopesWithSalary, GormScopesWithName([]string{"Tom", "Jerry"})).Find(&employees)
+	for _, employee := range employees {
+		marshal, _ := json.Marshal(&employee)
+		fmt.Printf("GormScopes is %+v\n", string(marshal))
+	}
+}
+
+func GormCount() {
+	var count int64
+	//selectDb.Model(Employee{}).Count(&count)
+	/*使用distinct计数*/
+	//selectDb.Model(Employee{}).Distinct("name").Count(&count)
+	//selectDb.Model(Employee{}).Select("count(distinct(name))").Count(&count)
+	/*使用分组计数*/
+	selectDb.Table("employee").Group("name").Count(&count)
+	fmt.Printf("employee total_count is %d", count)
 }
