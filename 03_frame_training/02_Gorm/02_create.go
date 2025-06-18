@@ -47,6 +47,10 @@ func basicConnection() *gorm.DB {
 		//全局配置设置批量插入单个批次数量 /*这里是针对本次session设置批次*/db.Session(&gorm.Session{CreateBatchSize: 1000,})
 		CreateBatchSize: 1000,
 		Logger:          newLogger,
+		/*跳过默认的事务*/
+		SkipDefaultTransaction: true,
+		/*自动创建数据库外键约束*/
+		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 
 	if err != nil {

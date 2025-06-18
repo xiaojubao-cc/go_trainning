@@ -43,7 +43,7 @@ Raw SQL 查询          Raw().Scan()       最灵活，但需手动维护 SQL
 */
 
 type Department struct {
-	Id        int64      `json:"id" gorm:"table:department"`
+	Id        int64      `json:"id"`
 	Name      string     `json:"name"`
 	ManagerId int64      `json:"manager_id"` // 部门经理ID
 	Phone     string     `json:"phone"`      // 联系电话
@@ -52,7 +52,7 @@ type Department struct {
 }
 
 type Employee struct {
-	Id           int64      `json:"id" gorm:"table:employee"`
+	Id           *int64     `json:"id"`
 	Name         string     `json:"name"` // 姓名
 	Gender       int8       `json:"gender"`
 	BirthDate    CustomTime `json:"birth_date"` // 出生日期
@@ -171,13 +171,13 @@ func (employee *Employee) AfterFind(tx *gorm.DB) (err error) {
 
 func main() {
 	//CreateMultipleEmployee()
-	//SelectSingleEmployeeToStruct()
+	SelectSingleEmployeeToStruct()
 	//SelectSingleEmployeeToMap()
-	//如果主键是数字
+	/*如果主键是数字*/
 	//SelectSingleOrMultiplyEmployeeByNumberPrimaryKey()
-	//如果主键是非数字
+	/*如果主键是非数字*/
 	//SelectSingleOrMultiplyEmployeeByNotNumberPrimaryKey()
-	//如果结构体有默认值
+	/*如果结构体有默认值*/
 	//SelectSingleOrMultiplyEmployeeByStructDefaultValue()
 	/*字符串作为查询条件*/
 	//SelectSingleOrMultiplyEmployeeByWhereStringCondition()
@@ -218,7 +218,7 @@ func main() {
 	/*范围应用*/
 	//GormScopes()
 	/*计数*/
-	GormCount()
+	//GormCount()
 }
 
 func CreateMultipleEmployee() {
@@ -271,7 +271,7 @@ func CreateMultipleDepartment() {
 
 func SelectSingleEmployeeToStruct() {
 	var employee Employee
-	selectDb.First(&employee, 1)
+	selectDb.Session(&gorm.Session{QueryFields: true}).Select("name").First(&employee, 1)
 	marshal, _ := json.Marshal(&employee)
 	fmt.Printf("SelectSingleEmployeeToStruct is %+v", string(marshal))
 }
@@ -430,7 +430,8 @@ func GormForUpdateLock() {
 	/*
 		1.update:锁定操作行 SELECT * FROM `employee` WHERE `employee`.`id` = 1 FOR UPDATE
 	*/
-	var employee Employee = Employee{Id: 1}
+	i := int64(1)
+	var employee Employee = Employee{Id: &i}
 	selectDb.Clauses(clause.Locking{Strength: "UPDATE"}).Find(&employee)
 	marshal, _ := json.Marshal(&employee)
 	fmt.Printf("GormForUpdateLock is %+v\n", marshal)
@@ -438,7 +439,8 @@ func GormForUpdateLock() {
 
 func GormForShareLock() {
 	/*允许其他事务针对操作行进行查询 SELECT * FROM `employee` WHERE `employee`.`id` = 1 FOR SHARE OF `employee`*/
-	var employee Employee = Employee{Id: 1}
+	i := int64(1)
+	var employee Employee = Employee{Id: &i}
 	/*Table: clause.Table{Name: clause.CurrentTable}:当使用 JOIN 查询多个表时，若仅需锁定主表的数据行，避免对关联表加锁*/
 	selectDb.Clauses(clause.Locking{Strength: "SHARE", Table: clause.Table{Name: clause.CurrentTable}}).Find(&employee)
 }
@@ -448,7 +450,8 @@ func GormForWaitOption() {
 			Options:NOWAIT:立即返回
 		    SELECT * FROM `employee` WHERE `employee`.`id` = 1 FOR UPDATE NOWAIT
 	*/
-	var employee Employee = Employee{Id: 1}
+	i := int64(1)
+	var employee Employee = Employee{Id: &i}
 	selectDb.Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).Find(&employee)
 }
 

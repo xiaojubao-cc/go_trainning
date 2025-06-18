@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-//自定义中间件
-
+// CustomMiddleware 自定义中间件
+/*类型别名无需转换*/
 type CustomMiddleware = gin.HandlerFunc
 
 func customMiddleware() CustomMiddleware {

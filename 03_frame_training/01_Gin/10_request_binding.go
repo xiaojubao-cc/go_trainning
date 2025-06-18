@@ -73,8 +73,10 @@ func PostMethodBindingGroup(rp *gin.RouterGroup) {
 	routerGroup.POST("/postForm", noBindingFormKey)
 	/*curl -v -X POST --data-raw "user[name]=li&user[age]=18" http://localhost:8080/formMap*/
 	routerGroup.POST("/postFormMap", noBindingFormMap)
-	/*curl -v -H "Content-Type: application/x-www-form-urlencoded" --data-raw "name=manu&message=this_is_great" "http://localhost:8080/api/postMethod/queryAndForm/?id=1234&page=1"*/
+	/*curl -v -H "Content-Type: application/x-www-form-urlencoded" --data-raw "name=manu&message=this_is_great" "http://localhost:8080/api/postMethod/queryAndForm?id=1234&page=1"*/
 	routerGroup.POST("/queryAndForm", queryAndFormParam)
+	/*curl -v -H "Content-Type: application/x-www-form-urlencoded" --data-raw "name=manu&message=this_is_great" "http://localhost:8080/api/postMethod/queryAndFormWithStruct?id=1234&page=1*/
+	routerGroup.POST("/queryAndFormWithStruct", queryAndFormParamWithStruct)
 }
 
 /*
@@ -176,6 +178,25 @@ func shouldBindWithForm(context *gin.Context) {
 	}
 	context.JSON(http.StatusOK, gin.H{
 		"message": fmt.Sprintf("ShouldBindWithForm binding struct name:%s,age:%d", person.Name, person.Age),
+	})
+}
+func queryAndFormParamWithStruct(context *gin.Context) {
+	var person struct {
+		ID      int    `form:"id" binding:"required"`
+		Name    string `form:"name" binding:"required"`
+		Message string `form:"message" binding:"required"`
+		Page    int    `form:"page" binding:"required"`
+	}
+	err := context.ShouldBind(&person)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{
+			"code":    http.StatusBadRequest,
+			"message": err.Error(),
+		})
+		return
+	}
+	context.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("ShouldBind binding struct ID:%d,Name:%s,Message:%s,Page:%d", person.ID, person.Name, person.Message, person.Page),
 	})
 }
 
