@@ -16,4 +16,6 @@ func main() {
 	start, _ := time.Parse(LAYOUT, "20250603165341")
 	end, _ := time.Parse(LAYOUT, "20250603185341")
 	fmt.Println(int(end.Sub(start).Abs() / time.Hour))
+	duration, _ := time.ParseDuration("2" + "ms")
+	fmt.Println(duration)
 }

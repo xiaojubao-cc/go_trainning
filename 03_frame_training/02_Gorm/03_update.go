@@ -49,12 +49,6 @@ type Users struct {
 	Birthday time.Time
 }
 
-type CreditCards struct {
-	gorm.Model
-	Number string
-	UserID uint
-}
-
 func init() {
 	dbs = basicConnections()
 }
