@@ -12,6 +12,15 @@ import (
 	"time"
 )
 
+/*
+特性  	       值类型 (Order)	           指针类型 (Product)
+内存占用	        直接存储数据	               存储内存地址
+空值表示       零值结构体 (所有字段为零值)	nil (明确表示不存在)
+修改行为	       方法内修改不影响原始值	    方法内修改会影响原始对象
+数据库关联	   适合作为"拥有者"实体	    适合作为"被引用"实体
+JSON 序列化	     总是输出所有字段	          可省略 nil 字段
+适用场景	      核心实体、总是存在的对象	  可选关联、可能不存在的对象
+*/
 var associationDb *gorm.DB
 
 func init() {
@@ -52,8 +61,9 @@ func associationDbConnection() *gorm.DB {
 		log.Fatal("conn is fault")
 		return nil
 	}
-	//db.AutoMigrate(&Member{}, &Company{})
-	db.AutoMigrate(&Order{}, &OrderItem{}, &Product{})
+	//db.AutoMigrate(&People{}, &IdentityCard{})
+	//db.AutoMigrate(&Order{}, &OrderItem{}, &Product{})
+	db.AutoMigrate(&Human{}, &Language{})
 	return db
 }
 
@@ -83,7 +93,7 @@ type IdentityCard struct {
 }
 
 type Order struct {
-	ID         uint         `gorm:"primaryKey;autoIncrement"`
+	ID         uint
 	OrderItems []*OrderItem `gorm:"foreignKey:OrderID;references:ID"`
 }
 
@@ -92,15 +102,27 @@ func (Order) TableName() string {
 }
 
 type OrderItem struct {
-	ID        uint `gorm:"primaryKey;autoIncrement"`
-	OrderID   uint
-	ProductID uint
-	Product   *Product `gorm:"foreignKey:ProductID;references:ID"`
+	ID      uint
+	OrderID uint
+	Product *Product `gorm:"foreignKey:OrderItemID;references:ID"`
 }
 
 type Product struct {
-	ID   uint `gorm:"primaryKey;autoIncrement"`
-	Name string
+	ID          uint
+	Name        string
+	OrderItemID uint
+}
+
+type Human struct {
+	ID        uint
+	Name      string
+	Languages []*Language `gorm:"many2many:human_languages;"`
+}
+
+type Language struct {
+	ID     uint
+	Name   string
+	Humans []*Human `gorm:"many2many:human_languages;"`
 }
 
 func main() {
@@ -109,72 +131,67 @@ func main() {
 	/*has one一对一模型person has one CreditCard,CreditCard对象是person的属性,personId作为CreditCard属性*/
 	//GormAssociationHasOne()
 	/*一对多*/
-	GormAssociationHasMany()
+	//GormAssociationHasMany()
 }
 
 func GormAssociationHasMany() {
-	tx := associationDb.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			fmt.Println("Transaction rolled back:", r)
-		}
-	}()
-
-	// 1. 先处理最底层的Product（避免嵌套创建）
-	products := []Product{
-		{Name: "女装"},
-		{Name: "厨具"},
-		{Name: "生活旅行"},
+	//var OrderItems []*OrderItem
+	//OrderItems = append(OrderItems, &OrderItem{
+	//	ID:      1,
+	//	OrderID: 1,
+	//	Product: &Product{
+	//		ID:          1,
+	//		Name:        "product1",
+	//		OrderItemID: 1,
+	//	},
+	//}, &OrderItem{
+	//	ID:      2,
+	//	OrderID: 1,
+	//	Product: &Product{
+	//		ID:   2,
+	//		Name: "product2",
+	//	},
+	//})
+	//var orders []Order
+	//orders = append(orders, Order{
+	//	ID:         1,
+	//	OrderItems: OrderItems,
+	//})
+	//associationDb.Create(&orders)
+	var orders []Order
+	associationDb.Preload("OrderItems"). // 加载 OrderItems
+						Preload("OrderItems.Product"). // 加载 OrderItems 的 Product
+						Find(&orders)
+	for _, order := range orders {
+		marshal, _ := json.Marshal(&order)
+		fmt.Printf("GormAssociationHasMany is %+v\n", string(marshal))
 	}
-
-	// 使用Clauses确保不存在时创建
-	if err := tx.Create(&products).Error; err != nil {
-		tx.Rollback()
-	}
-
-	// 2. 创建Order（此时不关联Items）
-	order := Order{}
-	if err := tx.Create(&order).Error; err != nil {
-		tx.Rollback()
-	}
-
-	// 3. 创建OrderItems并关联Product
-	items := []OrderItem{
-		{OrderID: order.ID, ProductID: products[0].ID}, // 女装
-		{OrderID: order.ID, ProductID: products[1].ID}, // 厨具
-	}
-	if err := tx.Create(&items).Error; err != nil {
-		tx.Rollback()
-	}
-
-	// 4. 查询验证（使用Preload）
-	var result Order
-	if err := tx.Preload("OrderItems.Product").First(&result, order.ID).Error; err != nil {
-		tx.Rollback()
-	}
-
-	jsonData, _ := json.MarshalIndent(result, "", "  ")
-	fmt.Println("Created order:", string(jsonData))
 }
 
 func GormAssociationHasOne() {
 	var peoples []People
-	peoples = append(peoples, People{
-		ID:   1,
-		Name: "Tom",
-		IdentityCard: &IdentityCard{
-			Number:   "123456789",
-			PeopleID: 1,
-		},
-	}, People{
-		ID:   2,
-		Name: "Jerry",
-		IdentityCard: &IdentityCard{
-			Number:   "123456788",
-			PeopleID: 2,
-		},
-	})
+	//peoples = append(peoples, People{
+	//	ID:   1,
+	//	Name: "Tom",
+	//	IdentityCard: &IdentityCard{
+	//		Number:   "123456789",
+	//		PeopleID: 1,
+	//	},
+	//}, People{
+	//	ID:   2,
+	//	Name: "Jerry",
+	//	IdentityCard: &IdentityCard{
+	//		Number:   "123456788",
+	//		PeopleID: 2,
+	//	},
+	//})
+	//associationDb.Create(&peoples)
+	//associationDb.Preload("IdentityCard").Where(&People{ID: 1}).Find(&peoples)
+	associationDb.Find(&peoples)
+	for _, people := range peoples {
+		marshal, _ := json.Marshal(&people)
+		fmt.Printf("GormAssociationHasOne is %+v\n", string(marshal))
+	}
 }
 
 func GormAssociationBelongsTo() {
