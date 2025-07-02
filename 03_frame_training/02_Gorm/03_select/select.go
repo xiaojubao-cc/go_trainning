@@ -153,7 +153,7 @@ func main() {
 	//CreateMultipleEmployee()
 	/*查询数据*/
 	//SelectSingleEmployeeToStruct()
-	//SelectSingleEmployeeToMap()
+	SelectSingleEmployeeToMap()
 
 	//主键条件查询
 	/*如果主键是数字*/
@@ -653,4 +653,18 @@ func GormSessionDryRun() {
 	statement := selectDb.Session(&gorm.Session{DryRun: true}).Table("employee").Statement
 	/*获得完整的执行sql*/
 	selectDb.Dialector.Explain(statement.SQL.String(), statement.Vars...)
+}
+
+func GormToSQL() {
+	var employees []Employee
+	selectDb.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		tx.FindInBatches(&employees, 2, func(tx *gorm.DB, batch int) error {
+			//针对查询出来的数据进行操作
+			for _, employee := range employees {
+				fmt.Printf("employee:%+v", employee)
+			}
+			return nil
+		})
+		return nil
+	})
 }
