@@ -52,6 +52,7 @@ func basicConnection() *gorm.DB {
 		SkipDefaultTransaction: true,
 		/*自动创建数据库外键约束*/
 		DisableForeignKeyConstraintWhenMigrating: true,
+		FullSaveAssociations:                     true,
 	})
 
 	if err != nil {
@@ -60,7 +61,8 @@ func basicConnection() *gorm.DB {
 	}
 	//db.AutoMigrate(&User{}, &CreditCard{})
 	//db.AutoMigrate(&Employee{}, &Department{})
-	db.AutoMigrate(&Order{}, &OrderItem{})
+	//db.AutoMigrate(&Order{}, &OrderItem{}, &Product{})
+	db.AutoMigrate(&Student{}, &Course{}, &Enrollment{})
 	return db
 }
 
@@ -115,9 +117,41 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID       uint `primaryKey`
-	Quantity int
-	OrderID  uint
+	ID        uint `gorm:"primaryKey"`
+	Quantity  int
+	OrderID   uint
+	ProductID uint
+	Product   Product `gorm:"foreignKey:ProductID;references:ID"`
+}
+
+type Product struct {
+	ID    uint `gorm:"primaryKey"`
+	Name  string
+	Price float64
+}
+
+// Student /*多对多模型*/
+type Student struct {
+	ID        uint   `gorm:"primaryKey"`
+	Name      string `gorm:"not null"`
+	Email     string `gorm:"unique;not null"`
+	CreatedAt time.Time
+	Courses   []Course `gorm:"many2many:enrollments;"` // 多对多关系
+}
+type Course struct {
+	ID          uint   `gorm:"primaryKey"`
+	Title       string `gorm:"not null;index"`
+	Description string
+	StartDate   time.Time
+	Students    []Student `gorm:"many2many:enrollments;"` // 多对多关系
+}
+
+// Enrollment 选课关系模型（连接表，含额外字段）
+type Enrollment struct {
+	StudentID  uint      `gorm:"primaryKey"` // 复合主键
+	CourseID   uint      `gorm:"primaryKey"` // 复合主键
+	EnrolledAt time.Time `gorm:"default:CURRENT_TIMESTAMP"`
+	Grade      float64
 }
 
 func main() {
@@ -132,35 +166,154 @@ func main() {
 	/*插入belongTo模型*/
 	//CreateBelongToModel()
 	/*插入hasMany模型*/
-	CreateHasManyModel()
+	//CreateHasManyModel()
+	/*插入many2many模型*/
+	//CreateMany2ManyModel()
+	/*查询many2many*/
+	QueryMany2ManyModel()
+}
+
+type StudentCourseGrade struct {
+	StudentName string
+	CourseTitle string
+	Grade       float64
+}
+
+func QueryMany2ManyModel() {
+	//queryStudentWithCourses(1)
+	//queryCourseStudents("数学基础")
+	queryAllGrades()
+}
+
+func queryAllGrades() {
+	var studentCourseGrades []StudentCourseGrade = make([]StudentCourseGrade, 0)
+	db.Table("courses").Select("courses.title as course_title,enrollments.grade,students.name as student_name").
+		Joins("join enrollments on enrollments.course_id = courses.id").
+		Joins("join students on students.id = enrollments.student_id").Scan(&studentCourseGrades)
+	for _, studentCourseGrade := range studentCourseGrades {
+		fmt.Printf("studentCourseGrade:%+v\n", studentCourseGrade)
+	}
+}
+
+func queryCourseStudents(title string) {
+	var courses []Course
+	db.Table("courses").Select("courses.id,courses.title,courses.description,courses.start_date").
+		Joins("left join enrollments on enrollments.course_id = courses.id").
+		Joins("left join students on students.id = enrollments.student_id").
+		Where("courses.title = ?", title).Scan(&courses)
+	for _, course := range courses {
+		fmt.Printf("Course:%+v\n", course)
+	}
+}
+func queryStudentWithCourses(studentID uint) {
+	var students []Student = make([]Student, 0)
+	db.Preload("Courses").Find(&students, studentID)
+	fmt.Printf("student:%+v", students)
+}
+func CreateMany2ManyModel() {
+	// 创建课程
+	courses := []Course{
+		{Title: "数学基础", Description: "基础数学课程", StartDate: time.Now()},
+		{Title: "编程入门", Description: "Python编程基础", StartDate: time.Now().AddDate(0, 1, 0)},
+		{Title: "数据结构", Description: "算法与数据结构", StartDate: time.Now().AddDate(0, 2, 0)},
+	}
+	db.Create(&courses)
+
+	// 创建学生
+	students := []Student{
+		{Name: "张三", Email: "zhangsan@example.com"},
+		{Name: "李四", Email: "lisi@example.com"},
+		{Name: "王五", Email: "wangwu@example.com"},
+	}
+	db.Create(&students)
+
+	// 建立关联（学生选课）
+	tx := db.Begin()
+
+	// 方法1：使用Association添加关联
+	mathCourse := courses[0]
+	programmingCourse := courses[1]
+
+	//Enrollment中的外键字段填充
+	if err := tx.Model(&students[0]).Association("Courses").Append(&mathCourse, &programmingCourse); err != nil {
+		tx.Rollback()
+		panic("关联添加失败")
+	}
+	//Enrollment分数需要单独进行添加
+	if err := tx.Model(&Enrollment{}).
+		Where("student_id = ? AND course_id = ?", students[0].ID, mathCourse.ID).
+		Update("grade", 92.5).Error; err != nil {
+		tx.Rollback()
+		panic("更新分数失败")
+	}
+
+	if err := tx.Model(&Enrollment{}).
+		Where("student_id = ? AND course_id = ?", students[0].ID, programmingCourse.ID).
+		Update("grade", 88.0).Error; err != nil {
+		tx.Rollback()
+		panic("更新分数失败")
+	}
+	tx.Commit()
 }
 
 func CreateHasManyModel() {
 	//创建订单和订单明细
-	tx := db.Begin()
-	var order = Order{
-		Name:      "Order1",
-		OrderDate: time.Now(),
+	//tx := db.Begin()
+	//tx = tx.Debug()
+	//var orders []Order = make([]Order, 0)
+	//orders = append(orders, Order{
+	//	Name:      "Order1",
+	//	OrderDate: time.Now(),
+	//}, Order{
+	//	Name:      "Order2",
+	//	OrderDate: time.Now(),
+	//})
+	//if err := tx.Create(&orders).Error; err != nil {
+	//	tx.Rollback()
+	//}
+	////创建product
+	//var products []Product = make([]Product, 0)
+	//products = append(products, Product{
+	//	Name:  "茶杯",
+	//	Price: 100.00,
+	//}, Product{
+	//	Name:  "电脑",
+	//	Price: 200.00,
+	//})
+	//if err := tx.Create(&products).Error; err != nil {
+	//	tx.Rollback()
+	//}
+	//
+	////创建订单明细
+	//var orderItems []OrderItem = make([]OrderItem, 0)
+	//orderItems = append(orderItems, OrderItem{
+	//	OrderID:   orders[0].ID,
+	//	Quantity:  1,
+	//	ProductID: products[0].ID,
+	//}, OrderItem{
+	//	OrderID:   orders[1].ID,
+	//	Quantity:  2,
+	//	ProductID: products[1].ID,
+	//})
+	//
+	//if err := tx.Create(&orderItems).Error; err != nil {
+	//	tx.Rollback()
+	//}
+	//tx.Commit()
+	//查询数据
+	var Order []Order
+	//db.Preload("OrderItems").Preload("OrderItems.Product").Find(&Order)
+	db.Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.price > ?", 100).
+		//SELECT `orders`.`id`,`orders`.`name`,`orders`.`order_date` FROM `orders` JOIN order_items ON order_items.order_id = orders.id JOIN products ON products.id = order_items.product_id WHERE products.price > 100
+		//这里为了填充嵌套字段OrderItems.Product和OrderItems数据
+		Preload("OrderItems.Product").
+		Find(&Order)
+	for _, order := range Order {
+		jsonData, _ := json.MarshalIndent(order, "", "  ")
+		fmt.Println("Created order:", string(jsonData))
 	}
-	if err := tx.Create(&order); err != nil {
-		tx.Rollback()
-		return
-	}
-	var orderItems []OrderItem = make([]OrderItem, 0)
-	orderItems = append(orderItems, OrderItem{
-		OrderID:  order.ID,
-		Quantity: 1,
-	}, OrderItem{
-		OrderID:  order.ID,
-		Quantity: 2,
-	})
-	if err := tx.Model(&order).Association("OrderItems").Append(orderItems); err != nil {
-		tx.Rollback()
-		return
-	}
-	tx.Commit()
-	db.Preload("OrderItems").Find(&order)
-	fmt.Printf("%+v", order)
 }
 
 func CreateBelongToModel() {
