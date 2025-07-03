@@ -82,4 +82,57 @@ Table("table_name")   直接指定表名          ❌ 无需结构体          �
 /*FullSaveAssociations: true,自动保存关联及引用*/
 /*上下文*/
 /*QueryFields: true,按字段查询*/
-/*CreateBatchSize: 100,创建数据批次*/
+/*CreateBatchSize: 100,创建数据批次
+
+11.原生raw和clause:
+	需要跨数据库支持？ → 选 Clause
+	查询极其复杂？ → 选 Raw SQL
+	安全要求高？ → 选 Clause
+	性能敏感？ → 选 Raw SQL
+	长期维护？ → 优先 Clause
+
+12.gorm中的操作
+	1.中间操作 (Chainable Methods)
+		条件筛选	Where(), Or(), Not(), Limit(), Offset(), Distinct()
+		字段控制	Select(), Omit(), Order(), Group(), Having()
+		关联处理	Preload(), Joins(), Association()
+		模型设置	Model(), Table(), Debug(), Scopes(), Attrs(), Assign()
+		子句扩展	Clauses(), WithContext(), Session()
+		事务控制	Begin(), Transaction() (开始事务部分)
+		分页	Scopes(Paginate(page, size))
+	2.终结操作
+		查询操作	Find(), First(), Last(), Take(), Pluck(), Count(), Row(), Rows()
+		CRUD 操作	Create(), Save(), Update(), Updates(), Delete()
+		扫描结果	Scan(), ScanRows()
+		批量操作	FindInBatches(), CreateInBatches()
+		原生 SQL	Raw(), Exec() (当配合 Scan 或 Exec 时)
+		事务提交	Commit(), Rollback() (事务中的执行操作)
+		关联操作	Association().Append(), Association().Delete()
+
+13.gorm中哪些操作会跳过钩子函数
+	操作类型	方法示例	说明
+	原生 SQL	db.Exec()	直接执行 SQL 语句
+	批量更新	UpdateColumn()	跳过所有回调（hooks）和自动更新时间
+	批量更新	UpdateColumns()	跳过所有回调（hooks）和自动更新时间
+	子查询更新	Update() 带子查询	跳过模型级操作
+	表达式更新	Update("field", gorm.Expr(...))	跳过自动更新时间戳
+	无模型操作	Table().Update()	未指定模型结构体时跳过钩子
+	部分字段更新	Select().Update()	仅更新选定字段，跳过未选字段的自动更新
+	批量删除	Delete() 不带模型实例	直接执行 SQL 删除，跳过模型钩子
+    创建使用map作为参数
+
+14.struct和map作为参数
+	1.使用map的场景:
+		需要零值更新;动态条件构建(map[string]interface{});批量更新多个字段;跨表字段的更新;高性能的批量操作(跳过钩子函数,有待考证)
+	2.使用struct场景:
+		需要触发钩子函数;类型安全的字段操作(tag标签validate);使用模型关系(Association);嵌套结构体更新;需要自动填充时间戳;
+
+15.select和omit使用属性名或者字段名(尽量保持一致)
+	场景	推荐命名方式	示例
+	简单模型查询	结构体属性名	Select("Name", "Email")
+	关联查询	数据库列名（带前缀）	Select("users.name")
+	聚合函数	列名 + 别名	Select("AVG(age) as avg")
+	自定义列名模型	实际列名	Select("display_name")
+	动态字段选择	结构体属性名	Select(fields)
+	嵌入式结构	实际列名	Select("bio")
+*/
